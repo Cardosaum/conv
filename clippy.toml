@@ -1,0 +1,7 @@
+# Thresholds only. Lint levels live in Cargo.toml [lints].
+# MSRV comes from Cargo.toml rust-version.
+avoid-breaking-exported-api = false
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true
+doc-valid-idents = ["MessagePack", ".."]

@@ -1,0 +1,13 @@
+# cargo-audit 0.22. Unknown keys are rejected.
+# No advisory is ignored. A known issue is fixed by changing the dependency.
+
+[advisories]
+ignore = []
+
+[output]
+deny = ["warnings", "yanked"]
+quiet = false
+show_tree = true
+
+[yanked]
+enabled = true
