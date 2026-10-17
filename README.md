@@ -8,14 +8,45 @@ conv FROM TO
 
 `FROM` and `TO` name the encodings. Names are case-insensitive. `conv` reads no files and takes no configuration.
 
-```sh
-echo '{"name":"Ada","ok":true,"count":3}' | conv json toml
+## Examples
+
+A line starting with `$` is what you type. The lines under it are the result.
+
+Read a TOML config with `jq`. Comments are dropped, so this is for the pipe, not for rewriting a file you edit by hand.
+
+```console
+$ cat app.toml
+[database]
+host = "localhost"
+port = 5432
+name = "app"
+
+$ conv toml json < app.toml
+{"database":{"host":"localhost","name":"app","port":5432}}
+
+$ conv toml json < app.toml | jq '.database.port'
+5432
 ```
 
-```toml
-name = "Ada"
-ok = true
-count = 3
+Turn that JSON into a snippet you can paste into a config:
+
+```console
+$ printf '%s\n' '{"database":{"host":"localhost","port":5432,"name":"app"}}' | conv json toml
+[database]
+host = "localhost"
+port = 5432
+name = "app"
+```
+
+Post a flat JSON object as a form. `"$(...)"` drops the newline `conv` adds, so it does not become part of the password:
+
+```console
+$ printf '%s\n' '{"user":"ada","password":"secret"}' | conv json url
+user=ada&password=secret
+
+$ curl -fsS --data "$(conv json url < login.json)" \
+    -H 'content-type: application/x-www-form-urlencoded' \
+    https://example/login
 ```
 
 ## Install
@@ -42,44 +73,6 @@ man -l doc/conv.1    # from this repo, before install
 
 ```sh
 export MANPATH="${XDG_DATA_HOME:-$HOME/.local/share}/man:${MANPATH:-}"
-```
-
-## Examples
-
-YAML to JSON. `yml` is the same encoding:
-
-```sh
-printf '%s\n' 'name: Ada' 'ok: true' 'count: 3' | conv yml json
-```
-
-```json
-{"name":"Ada","ok":true,"count":3}
-```
-
-JSON to a query string. `www-form` is the same encoding:
-
-```sh
-echo '{"name":"Ada","ok":true}' | conv json url
-```
-
-```
-name=Ada&ok=true
-```
-
-Values come back as strings. A trailing newline is part of the last value, so this input has none:
-
-```sh
-printf '%s' 'name=Ada&ok=true' | conv url json
-```
-
-```json
-{"name":"Ada","ok":"true"}
-```
-
-Read a file, convert twice, write a file:
-
-```sh
-conv yaml json < notes.yml | conv json toml > notes.toml
 ```
 
 ## Formats
