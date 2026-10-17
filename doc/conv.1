@@ -1,0 +1,95 @@
+.Dd October 17, 2026
+.Dt CONV 1
+.Os
+.Sh NAME
+.Nm conv
+.Nd convert one value from standard input to standard output
+.Sh SYNOPSIS
+.Nm
+.Op Fl hV
+.Ar from
+.Ar to
+.Sh DESCRIPTION
+.Nm
+reads one value from standard input and writes it to standard output.
+It reads no files and takes no configuration.
+.Ar from
+and
+.Ar to
+name the input and output encodings.
+Names are case-insensitive.
+.Pp
+A data error is one line on standard error, prefixed with
+.Dq conv: ,
+and standard output is left empty.
+A usage error is reported by the argument parser.
+.Sh OPTIONS
+.Bl -tag -width "-V, --version"
+.It Fl h , Fl \-help
+Display this help and exit.
+.It Fl V , Fl \-version
+Output version information and exit.
+.El
+.Sh FORMATS
+.Bl -tag -width "www-form"
+.It Cm json
+One value.
+Output is compact.
+.It Cm yaml
+One document.
+.Cm yml
+is an alias.
+.It Cm toml
+One document.
+The root must be a table, and null is an error.
+.It Cm ron
+One value.
+.It Cm url
+A query string.
+Values are strings.
+.Cm www\-form
+is an alias.
+.It Cm cbor
+Raw bytes, as in RFC 8949.
+.It Cm msgpack
+Raw bytes.
+.El
+.Pp
+.Cm json ,
+.Cm yaml ,
+.Cm toml ,
+.Cm ron ,
+and
+.Cm url
+are text and end with a newline.
+.Cm cbor
+and
+.Cm msgpack
+are raw bytes, including when standard output is a terminal.
+.Pp
+Input is one value.
+A second value or other trailing data is an error, and nothing is written.
+Comments, anchors, and tags are not preserved.
+.Sh EXIT STATUS
+.Bl -tag -width 2n
+.It 0
+The conversion succeeded.
+.It 1
+The value could not be converted.
+.It 2
+There was a usage error.
+.El
+.Sh EXAMPLES
+Convert JSON on standard input to TOML:
+.Bd -literal -offset indent
+echo \(aq{"abc": 123}\(aq | conv json toml
+.Ed
+.Pp
+Convert YAML on standard input to JSON:
+.Bd -literal -offset indent
+conv yaml json
+.Ed
+.Sh AUTHORS
+.An Matheus Cardoso
+.Sh LICENSE
+MIT.
