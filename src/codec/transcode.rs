@@ -12,9 +12,6 @@ use crate::format::Format;
 
 use super::{Encode, Error};
 
-// ponytail: one conversion at a time per thread. `Deserialize` can only return
-// the input error, so an output rejection is parked here until `finish` reads
-// it. A re-entrant convert on this thread would clobber it.
 thread_local! {
     static OUTPUT: RefCell<Option<Source>> = const { RefCell::new(None) };
 }
@@ -104,11 +101,6 @@ impl<'de, E: Encode> Deserialize<'de> for Forward<E> {
 }
 
 /// One serde value, rich enough to serialize more than once.
-///
-/// ponytail: buffered because `Serialize::serialize` takes `&self` and toml
-/// serializes each value once to classify it before writing. A one-shot drive
-/// would drop the value on that first pass. Byte strings and non-string keys
-/// stay. Integer width is whatever the decoder visits.
 pub(crate) enum Event {
     Bool(bool),
     I8(i8),

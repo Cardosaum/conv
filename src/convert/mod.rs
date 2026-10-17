@@ -19,9 +19,6 @@ pub fn convert(
     mut reader: impl Read,
     mut writer: impl Write,
 ) -> Result<(), Error> {
-    // ponytail: the whole input and output are buffered so a trailing-data
-    // error produces no bytes. Stream once a format can prove exhaustion
-    // before the first output byte.
     let mut input = Vec::new();
     reader.read_to_end(&mut input).map_err(Error::Read)?;
 
