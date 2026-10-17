@@ -1,27 +1,25 @@
-use std::io::Write;
+mod transcode;
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::de::Deserializer;
+
+pub(crate) use transcode::{Fail, Forward, capture, clear_output, emit, finish, reject};
 
 use crate::error::Error;
 use crate::format::Format;
 
-/// Read one value. `to` is only used when building the error.
 pub(crate) trait Decode {
-    fn decode<T: DeserializeOwned>(&self, input: &[u8], to: Format) -> Result<T, Error>;
+    fn transcode<E: Encode>(input: &[u8]) -> Result<Vec<u8>, Error>;
 }
 
-/// Write one value. `from` is only used when building the error.
 pub(crate) trait Encode {
-    fn encode<T: Serialize, W: Write>(
-        &self,
-        from: Format,
-        value: &T,
-        writer: W,
-    ) -> Result<(), Error>;
+    const FORMAT: Format;
+
+    fn accept<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, Fail<D::Error>>;
 }
 
-/// A format that can sit on either side of a conversion.
-pub(crate) trait Codec: Decode + Encode {}
-
-impl<T: Decode + Encode> Codec for T {}
+pub(crate) fn text(input: &[u8], format: Format) -> Result<&str, Error> {
+    std::str::from_utf8(input).map_err(|err| Error::Utf8 {
+        format,
+        source: err,
+    })
+}

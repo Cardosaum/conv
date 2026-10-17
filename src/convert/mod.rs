@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use crate::codec::{Codec, Encode};
+use crate::codec::Decode;
 use crate::error::Error;
 use crate::format::Format;
 use crate::{cbor, json, msgpack, ron, toml, url, yaml};
@@ -34,32 +34,28 @@ pub fn convert(
     Ok(())
 }
 
-fn dispatch<W: Write>(from: Format, to: Format, input: &[u8], writer: W) -> Result<(), Error> {
-    match from {
-        Format::Json => pipe(&json::Json, from, to, input, writer),
-        Format::Yaml => pipe(&yaml::Yaml, from, to, input, writer),
-        Format::Toml => pipe(&toml::Toml, from, to, input, writer),
-        Format::Ron => pipe(&ron::Ron, from, to, input, writer),
-        Format::Url => pipe(&url::Url, from, to, input, writer),
-        Format::Cbor => pipe(&cbor::Cbor, from, to, input, writer),
-        Format::Msgpack => pipe(&msgpack::Msgpack, from, to, input, writer),
-    }
+fn dispatch<W: Write>(from: Format, to: Format, input: &[u8], mut writer: W) -> Result<(), Error> {
+    let bytes = match from {
+        Format::Json => run::<json::Json>(to, input),
+        Format::Yaml => run::<yaml::Yaml>(to, input),
+        Format::Toml => run::<toml::Toml>(to, input),
+        Format::Ron => run::<ron::Ron>(to, input),
+        Format::Url => run::<url::Url>(to, input),
+        Format::Cbor => run::<cbor::Cbor>(to, input),
+        Format::Msgpack => run::<msgpack::Msgpack>(to, input),
+    }?;
+    writer.write_all(&bytes).map_err(Error::Write)
 }
 
-fn pipe<D, W>(decoder: &D, from: Format, to: Format, input: &[u8], writer: W) -> Result<(), Error>
-where
-    D: Codec,
-    W: Write,
-{
-    let value: serde_json::Value = decoder.decode(input, to)?;
+fn run<D: Decode>(to: Format, input: &[u8]) -> Result<Vec<u8>, Error> {
     match to {
-        Format::Json => json::Json.encode(from, &value, writer),
-        Format::Yaml => yaml::Yaml.encode(from, &value, writer),
-        Format::Toml => toml::Toml.encode(from, &value, writer),
-        Format::Ron => ron::Ron.encode(from, &value, writer),
-        Format::Url => url::Url.encode(from, &value, writer),
-        Format::Cbor => cbor::Cbor.encode(from, &value, writer),
-        Format::Msgpack => msgpack::Msgpack.encode(from, &value, writer),
+        Format::Json => D::transcode::<json::Json>(input),
+        Format::Yaml => D::transcode::<yaml::Yaml>(input),
+        Format::Toml => D::transcode::<toml::Toml>(input),
+        Format::Ron => D::transcode::<ron::Ron>(input),
+        Format::Url => D::transcode::<url::Url>(input),
+        Format::Cbor => D::transcode::<cbor::Cbor>(input),
+        Format::Msgpack => D::transcode::<msgpack::Msgpack>(input),
     }
 }
 

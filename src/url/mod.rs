@@ -1,33 +1,26 @@
-use std::io::Write;
+use serde::de::Deserializer;
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-
-use crate::codec::{Decode, Encode};
-use crate::error::{Convert, Error};
+use crate::codec::Forward;
+use crate::codec::{Decode, Encode, Fail, capture, clear_output, finish, reject, text};
 use crate::format::Format;
 
 pub(crate) struct Url;
 
 impl Decode for Url {
-    fn decode<T: DeserializeOwned>(&self, input: &[u8], to: Format) -> Result<T, Error> {
-        let text = std::str::from_utf8(input).map_err(|err| Error::Utf8 {
-            format: Format::Url,
-            source: err,
-        })?;
-        serde_html_form::from_str(text).convert(Format::Url, to)
+    fn transcode<E: Encode>(input: &[u8]) -> Result<Vec<u8>, crate::error::Error> {
+        clear_output();
+        let input = text(input, Format::Url)?;
+        finish::<E>(Format::Url, serde_html_form::from_str::<Forward<E>>(input))
     }
 }
 
 impl Encode for Url {
-    fn encode<T: Serialize, W: Write>(
-        &self,
-        from: Format,
-        value: &T,
-        mut writer: W,
-    ) -> Result<(), Error> {
-        let text = serde_html_form::to_string(value).convert(from, Format::Url)?;
-        writer.write_all(text.as_bytes()).map_err(Error::Write)
+    const FORMAT: Format = Format::Url;
+
+    fn accept<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, Fail<D::Error>> {
+        let event = capture(deserializer)?;
+        let text = serde_html_form::to_string(&event).map_err(reject)?;
+        Ok(text.into_bytes())
     }
 }
 

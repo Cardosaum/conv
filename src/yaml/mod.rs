@@ -1,33 +1,28 @@
-use std::io::Write;
+use serde::de::Deserializer;
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-
-use crate::codec::{Decode, Encode};
-use crate::error::{Convert, Error};
+use crate::codec::Forward;
+use crate::codec::{Decode, Encode, Fail, clear_output, emit, finish};
 use crate::format::Format;
 
 pub(crate) struct Yaml;
 
 impl Decode for Yaml {
-    fn decode<T: DeserializeOwned>(&self, input: &[u8], to: Format) -> Result<T, Error> {
+    fn transcode<E: Encode>(input: &[u8]) -> Result<Vec<u8>, crate::error::Error> {
+        clear_output();
         // `from_slice` rejects a second document.
-        serde_saphyr::from_slice(input).convert(Format::Yaml, to)
+        finish::<E>(Format::Yaml, serde_saphyr::from_slice::<Forward<E>>(input))
     }
 }
 
 impl Encode for Yaml {
-    fn encode<T: Serialize, W: Write>(
-        &self,
-        from: Format,
-        value: &T,
-        mut writer: W,
-    ) -> Result<(), Error> {
+    const FORMAT: Format = Format::Yaml;
+
+    fn accept<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, Fail<D::Error>> {
         // serde-saphyr writes to `fmt::Write`, then the bytes are copied out.
         let mut buf = String::new();
         let mut ser = serde_saphyr::Serializer::new(&mut buf);
-        value.serialize(&mut ser).convert(from, Format::Yaml)?;
-        writer.write_all(buf.as_bytes()).map_err(Error::Write)
+        emit(deserializer, &mut ser)?;
+        Ok(buf.into_bytes())
     }
 }
 

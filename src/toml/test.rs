@@ -21,8 +21,8 @@ fn chain(err: &Error) -> String {
 }
 
 #[rstest]
-#[case::root_array("[1,2]", "json -> toml: root must be a table")]
-#[case::null(r#"{"a":[null]}"#, "json -> toml: null at a[0]")]
+#[case::root_array("[1,2]", "json -> toml: unsupported array type")]
+#[case::null(r#"{"a":[null]}"#, "json -> toml: unsupported unit type")]
 fn rejects(#[case] input: &str, #[case] expected: &str) {
     assert_eq!(chain(&cv(input.as_bytes()).unwrap_err()), expected);
 }

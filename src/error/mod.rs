@@ -88,9 +88,6 @@ pub enum Source {
     /// A format crate returned an I/O error.
     #[error(transparent)]
     Io(#[from] io::Error),
-    /// A conversion rule rejected the value.
-    #[error("{0}")]
-    Message(String),
 }
 
 impl Error {
@@ -100,10 +97,6 @@ impl Error {
             to,
             source: source.into(),
         }
-    }
-
-    pub(crate) fn reason(from: Format, to: Format, message: impl Into<String>) -> Self {
-        Self::convert(from, to, Source::Message(message.into()))
     }
 }
 

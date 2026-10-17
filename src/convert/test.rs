@@ -405,6 +405,18 @@ fn text(#[case] from: Format, #[case] to: Format, #[case] input: &str, #[case] e
         0xa8, 0xd8, 0xa7, 0xf0, 0x9f, 0x98, 0x80, 0x61, 0xcc, 0x83,
     ][..]
 )]
+#[case::cbor_bytes_to_msgpack(
+    Format::Cbor,
+    Format::Msgpack,
+    &[0x42, b'h', b'i'][..],
+    &[0xc4, 0x02, b'h', b'i'][..]
+)]
+#[case::msgpack_bytes_to_cbor(
+    Format::Msgpack,
+    Format::Cbor,
+    &[0xc4, 0x02, b'h', b'i'][..],
+    &[0x42, b'h', b'i'][..]
+)]
 #[case::msgpack_to_json_unicode(
     Format::Msgpack,
     Format::Json,

@@ -1,33 +1,27 @@
-use std::io::Write;
+use serde::de::Deserializer;
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-
-use crate::codec::{Decode, Encode};
-use crate::error::{Convert, Error};
+use crate::codec::Forward;
+use crate::codec::{Decode, Encode, Fail, clear_output, emit, finish, reject, text};
 use crate::format::Format;
 
 pub(crate) struct Ron;
 
 impl Decode for Ron {
-    fn decode<T: DeserializeOwned>(&self, input: &[u8], to: Format) -> Result<T, Error> {
-        let text = std::str::from_utf8(input).map_err(|err| Error::Utf8 {
-            format: Format::Ron,
-            source: err,
-        })?;
-        ron::from_str(text).convert(Format::Ron, to)
+    fn transcode<E: Encode>(input: &[u8]) -> Result<Vec<u8>, crate::error::Error> {
+        clear_output();
+        let input = text(input, Format::Ron)?;
+        finish::<E>(Format::Ron, ron::from_str::<Forward<E>>(input))
     }
 }
 
 impl Encode for Ron {
-    fn encode<T: Serialize, W: Write>(
-        &self,
-        from: Format,
-        value: &T,
-        mut writer: W,
-    ) -> Result<(), Error> {
-        let text = ron::to_string(value).convert(from, Format::Ron)?;
-        writer.write_all(text.as_bytes()).map_err(Error::Write)
+    const FORMAT: Format = Format::Ron;
+
+    fn accept<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, Fail<D::Error>> {
+        let mut buf = String::new();
+        let mut ser = ron::Serializer::new(&mut buf, None).map_err(reject)?;
+        emit(deserializer, &mut ser)?;
+        Ok(buf.into_bytes())
     }
 }
 
