@@ -1,3 +1,6 @@
+# XDG by default. PREFIX selects a prefix. DESTDIR stages and skips man setup.
+root := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
 ifeq ($(PREFIX),)
   BINDIR ?= $(HOME)/.local/bin
   MANDIR ?= $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/man
@@ -17,7 +20,7 @@ install: build
 	install -D -m 755 target/release/conv "$(DESTDIR)$(BINDIR)/conv"
 	install -D -m 644 doc/conv.1 "$(DESTDIR)$(MANDIR)/man1/conv.1"
 ifeq ($(DESTDIR),)
-	-mandb -q "$(MANDIR)"
+	sh "$(root)scripts/man-install" install "$(BINDIR)" "$(MANDIR)"
 endif
 
 uninstall:
@@ -25,6 +28,7 @@ uninstall:
 	rm -f "$(DESTDIR)$(MANDIR)/man1/conv.1"
 ifeq ($(DESTDIR),)
 	-mandb -q "$(MANDIR)"
+	sh "$(root)scripts/man-install" uninstall "$(BINDIR)" "$(MANDIR)"
 endif
 	rmdir "$(DESTDIR)$(MANDIR)/man1" 2>/dev/null || true
 	@dir="$(DESTDIR)$(MANDIR)"; \

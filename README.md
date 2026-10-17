@@ -62,14 +62,14 @@ make install PREFIX=/usr/local   # PREFIX/bin and PREFIX/share/man
 make uninstall                    # same paths as install
 ```
 
-`BINDIR` and `MANDIR` override those two directories. `DESTDIR` stages the tree and skips the `whatis` update. `make uninstall` removes `conv` and `man1/conv.1` only. Other files stay. Pass the same `PREFIX`, `BINDIR`, `MANDIR`, or `XDG_DATA_HOME` you used to install.
+`BINDIR` and `MANDIR` override those two directories. `DESTDIR` stages the tree and skips the `whatis` update. `make uninstall` removes `conv`, `man1/conv.1`, and a `man` wrapper this install added. Other files stay. Pass the same `PREFIX`, `BINDIR`, `MANDIR`, or `XDG_DATA_HOME` you used to install.
 
 ```sh
 man conv
 man -l doc/conv.1    # from this repo, before install
 ```
 
-`info conv`, `whatis conv`, and `apropos conv` read that same page. If `man conv` does not find it, keep the system manuals and add this one:
+`info conv`, `whatis conv`, and `apropos conv` read that same page. If `man` does not already search the manual directory, and `BINDIR` is ahead of `man` on `PATH`, `make install` adds a `man` wrapper there. The wrapper puts that directory on `MANPATH` and then runs the real `man`. `whatis` and `apropos` are linked to it. When `BINDIR` is not ahead of `man`, install stops and prints:
 
 ```sh
 export MANPATH="${XDG_DATA_HOME:-$HOME/.local/share}/man:${MANPATH:-}"

@@ -1,0 +1,134 @@
+#!/bin/sh
+# Make man see the page we installed. When MANPATH is a closed list, man
+# never looks at the XDG manual directory. A wrapper earlier on PATH adds it.
+set -eu
+
+usage() {
+  echo "usage: man-install install|uninstall BINDIR MANDIR" >&2
+  exit 2
+}
+
+[ $# -eq 3 ] || usage
+mode=$1
+bindir=$2
+mandir=$3
+page=$mandir/man1/conv.1
+
+absdir() {
+  if [ -d "$1" ]; then
+    (CDPATH= cd -- "$1" && pwd)
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
+bindir=$(absdir "$bindir")
+mandir=$(absdir "$mandir")
+page=$mandir/man1/conv.1
+marker='# conv-manpath'
+
+sees_page() {
+  man -w conv 2>/dev/null | grep -F -x -q -- "$page"
+}
+
+ours() {
+  [ -f "$bindir/man" ] && grep -F -x -q -- "$marker" "$bindir/man"
+}
+
+remove_wrapper() {
+  ours || return 0
+  grep -F -x -q -- "man_dir='$mandir'" "$bindir/man" || return 0
+  rm -f "$bindir/man"
+  for cmd in whatis apropos; do
+    if [ -L "$bindir/$cmd" ] && [ "$(readlink "$bindir/$cmd")" = man ]; then
+      rm -f "$bindir/$cmd"
+    fi
+  done
+}
+
+case $mode in
+uninstall)
+  remove_wrapper
+  exit 0
+  ;;
+install) ;;
+*) usage ;;
+esac
+
+[ -f "$page" ] || {
+  echo "conv: missing $page" >&2
+  exit 1
+}
+
+if command -v mandb >/dev/null 2>&1; then
+  mandb -q "$mandir" || echo "conv: mandb could not index $mandir" >&2
+fi
+
+if sees_page; then
+  exit 0
+fi
+
+real=$(command -v man || true)
+real_dir=$(dirname "${real:-/man}")
+ahead=0
+IFS=:
+for p in $PATH; do
+  [ -n "$p" ] || continue
+  if [ "$p" = "$bindir" ]; then
+    ahead=1
+    break
+  fi
+  if [ "$p" = "$real_dir" ]; then
+    break
+  fi
+done
+unset IFS
+
+if [ "$ahead" -ne 1 ]; then
+  echo "conv: man does not search $mandir" >&2
+  echo "conv: put $bindir ahead of ${real_dir} on PATH, or run:" >&2
+  echo "  export MANPATH=\"$mandir:\${MANPATH:-}\"" >&2
+  exit 1
+fi
+
+if [ -e "$bindir/man" ] && ! ours; then
+  echo "conv: $bindir/man exists and was not installed by conv" >&2
+  echo "  export MANPATH=\"$mandir:\${MANPATH:-}\"" >&2
+  exit 1
+fi
+
+cat > "$bindir/man" << EOF
+#!/bin/sh
+$marker
+man_dir='$mandir'
+bin_dir='$bindir'
+case ":\${MANPATH-}:" in
+  *:"\$man_dir":*) ;;
+  *) MANPATH="\$man_dir\${MANPATH:+:\$MANPATH}"; export MANPATH ;;
+esac
+name=\${0##*/}
+IFS=:
+for p in \$PATH; do
+  [ -n "\$p" ] || continue
+  [ "\$p" = "\$bin_dir" ] && continue
+  if [ -x "\$p/\$name" ]; then
+    exec "\$p/\$name" "\$@"
+  fi
+done
+echo "conv: \$name: command not found" >&2
+exit 127
+EOF
+chmod 755 "$bindir/man"
+
+for cmd in whatis apropos; do
+  if [ -e "$bindir/$cmd" ] && [ ! -L "$bindir/$cmd" ]; then
+    echo "conv: $bindir/$cmd exists; leaving it" >&2
+    continue
+  fi
+  ln -sfn man "$bindir/$cmd"
+done
+
+if ! sees_page; then
+  echo "conv: man still cannot see $page" >&2
+  exit 1
+fi
