@@ -101,22 +101,6 @@ Input is one value. A second value or other trailing data is an error, and nothi
 | 1 | The value could not be converted. One line on standard error, `conv: ...`, and standard output is left empty. |
 | 2 | There was a usage error. |
 
-## Development
-
-The compiler is pinned in `rust-toolchain.toml`.
-
-```sh
-cargo fmt --check
-cargo lint
-cargo nextest run --profile ci
-cargo deny check
-cargo audit
-cargo machete
-typos
-```
-
-`cargo lint` runs clippy on every target with warnings denied. `cargo deny` and `cargo audit` fail on any known advisory.
-
 ## License
 
 [MIT](LICENSE).
