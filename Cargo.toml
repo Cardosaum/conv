@@ -23,7 +23,7 @@ thiserror = "2.0.21"
 toml = "1.1.8"
 
 [dev-dependencies]
-rstest = { version = "0.27.0", default-features = false }
+rstest = { version = "0.28.0", default-features = false }
 
 [profile.release]
 opt-level = 3
